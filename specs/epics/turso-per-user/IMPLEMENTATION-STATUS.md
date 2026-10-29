@@ -4,7 +4,7 @@
 |---|---|---|
 | TP0 — the spec | ✅ | the repository's first commit |
 | TP1 — a database per user on Workers | ✅ | TP-2 |
-| TP2 — a baseline | planned | TP-3 |
+| TP2 — a baseline | ✅ | TP-3, tagged `baseline-v1` |
 
 ## Departures from the upstream template
 

@@ -10,7 +10,7 @@ metadata:
 spec:
   title: "Vercel's Turso Per User Starter on Cloudflare Workers"
   summary: "The Turso Per User Starter — a Next.js todo app where everyone who signs up with Clerk gets a Turso database of their own, created through Turso's Platform API — runs on Cloudflare Workers + Static Assets through @opennextjs/cloudflare, Turso kept as the SaaS it is and reached over libSQL's HTTP protocol, Clerk's and Turso's keys as Orun secrets and a site that serves before they exist, inside the Cirrus baseline's repository conventions, and becomes an Orun baseline that takes a new site from nothing to live on stage and prod in one landing."
-  state: started
+  state: completed
   milestones:
     - name: "TP0 — the spec"
       exitCriteria:

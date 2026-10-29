@@ -9,7 +9,7 @@ copy of it somebody else's in one landing.**
 
 | | |
 |---|---|
-| Status | In progress — TP1 on main: the site runs on Workers |
+| Status | ✅ Shipped (`baseline-v1`) — proven offline in Baseline CI; not yet live (risk TP-A) |
 | Upstream | [notrab/turso-per-user-starter](https://github.com/notrab/turso-per-user-starter), at `590144a` (2025-04-03) |
 | Reference | [notion-waitlist](https://github.com/sourceplane/notion-waitlist) — portfolio-starter-kit's scaffolding, tests and bootstrap, with a SaaS's keys as optional Orun secrets; [clerk-auth-starter](https://github.com/sourceplane/clerk-auth-starter) — Clerk on Workers and the site before Clerk is connected; [turso-starter](https://github.com/sourceplane/turso-starter) — the canonical shape |
 | Key | `TP` (turso-starter's is `TU`) |
