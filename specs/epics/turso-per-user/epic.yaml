@@ -1,0 +1,34 @@
+# The epic's declaration. metadata.name equals the directory name; metadata.key
+# is the task-key prefix this epic reserves (TP → TP-1, TP-2, …; TU is
+# turso-starter's). Owner, target date and health are the platform's — never
+# written here.
+apiVersion: orun.io/v1
+kind: Epic
+metadata:
+  name: turso-per-user
+  key: TP
+spec:
+  title: "Vercel's Turso Per User Starter on Cloudflare Workers"
+  summary: "The Turso Per User Starter — a Next.js todo app where everyone who signs up with Clerk gets a Turso database of their own, created through Turso's Platform API — runs on Cloudflare Workers + Static Assets through @opennextjs/cloudflare, Turso kept as the SaaS it is and reached over libSQL's HTTP protocol, Clerk's and Turso's keys as Orun secrets and a site that serves before they exist, inside the Cirrus baseline's repository conventions, and becomes an Orun baseline that takes a new site from nothing to live on stage and prod in one landing."
+  state: started
+  milestones:
+    - name: "TP0 — the spec"
+      exitCriteria:
+        - "the repository is born with its intent, CI, tooling and spec index, and this doc set and the task contracts are on main"
+      tasks: [TP-1]
+    - name: "TP1 — a database per user on Workers"
+      exitCriteria:
+        - "apps/web is the upstream template, built by OpenNext into one Worker with Static Assets"
+        - "a signed Clerk user.created webhook creates the user's database through Turso's Platform API as the template does, and a forged, stale or altered one creates nothing"
+        - "the todo list reads and writes the user's own database with the web libSQL client"
+        - "without Clerk's or Turso's keys the site serves and says what to connect, and nothing throws"
+        - "no key but Clerk's publishable key is in any bundle: the deploy hands them to the Worker as Worker secrets"
+        - "`pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build` are green, and the Worker fits Workers Free"
+        - "the README says how to run, test, preview and deploy it, how to connect Clerk and Turso, and how every Vercel piece maps to Cloudflare"
+      tasks: [TP-2]
+    - name: "TP2 — a baseline"
+      exitCriteria:
+        - "blueprint.yaml (the console card) and repo-blueprint.yaml (the build) take a new site from nothing to live on stage and prod in one landing, then record it"
+        - "a site built from it carries the site only, renamed throughout to its own name, repository and Worker, with the template's credit intact"
+        - "Baseline CI is green: contract tests, generated component docs, the blueprint read by the pinned orun, the leak gate, the offline bootstrap and the end-to-end tier, not connected and connected to a stand-in of Turso's Platform API"
+      tasks: [TP-3]
