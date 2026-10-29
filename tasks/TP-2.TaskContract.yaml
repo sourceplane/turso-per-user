@@ -1,0 +1,20 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: TP-2
+  title: "A database per user on Workers"
+spec:
+  goal: The Turso Per User Starter runs on Cloudflare Workers + Static Assets through OpenNext, creates each user's Turso database through the Platform API from a signed Clerk webhook or their first visit, reads and writes it with the web libSQL client, serves before Clerk and Turso are connected, keeps their keys out of every bundle, and has its tests and a README that says how it maps to Vercel
+  affects:
+    - apps/web
+    - tests/web
+    - tooling/wire
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - README.md
+    - .gitignore
+  doneWhen:
+    - pnpm typecheck, lint, test and build are green
+    - wrangler dev serves the site without the keys and with them, a signed webhook creating a database at a stand-in of the Platform API and a forged one refused
+    - the Worker is under Workers Free's 3 MiB gzipped
+  gates: []
