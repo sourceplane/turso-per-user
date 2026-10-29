@@ -1,0 +1,119 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: web
+  description: The todo app with a database per user — Clerk sign-up and sign-in, each user's own Turso database created through Turso's Platform API (a signed Clerk webhook, or the first visit), the todos read and written in it over libSQL's HTTP protocol (Next.js on Cloudflare Workers + Static Assets via @opennextjs/cloudflare, per environment)
+spec:
+  type: cloudflare-workers-assets-turbo
+  lifecycle: production
+  owner: platform
+  # Its pages, attached to it in the workspace's catalog: what the Docs
+  # library shows for it, and what the catalog's docs and runbook checks read.
+  # Generated from what this manifest and its sources declare.
+  docs:
+    overview: docs/overview.md
+    pages:
+      - { path: docs/architecture.md, role: architecture, title: Architecture }
+      - { path: docs/runbook.md, role: runbook, title: Runbook }
+  # `app`, not `web`: a domain and a component share one name space in the
+  # catalog, and a domain called `web` hid this component from it.
+  domain: app
+  path: apps/web
+  # Its own lane per environment: the Next.js build is the longest job in the
+  # plan, and a shared lane would wait on it.
+  lane: isolated
+  # No dependsOn: the site provisions nothing of its own — every user's
+  # database is created in the owner's Turso organization through Turso's
+  # Platform API, at request time — so there is no infra component before it.
+  #
+  # Clerk's and Turso's keys, stored per environment as the product's secrets
+  # (README → Connect Clerk, Connect Turso, The webhook). Clerk's publishable
+  # key is the build's (Next inlines it into the pages); its secret key, the
+  # webhook's signing secret and Turso's four values are the Worker's, read
+  # per request, so the build hands them to the Worker as Worker secrets and
+  # no bundle contains them (buildCommand below). BEST-EFFORT references,
+  # wire-now-seed-later: a key nobody has stored yet is skipped when the job
+  # resolves its secrets (no env var, no failure). Without Clerk's keys the
+  # site builds its "connect Clerk" pages; without Turso's a signed-in user is
+  # told Turso is not connected yet; without the webhook's secret the webhook
+  # answers 503 and a user's database is created on their first visit — so a
+  # fresh product deploys and serves before its owner has a Clerk application
+  # or a Turso organization at all.
+  optionalSecretEnv:
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "secret://turso-per-user/turso-per-user/{{ .environment }}/CLERK_PUBLISHABLE_KEY"
+    CLERK_SECRET_KEY: "secret://turso-per-user/turso-per-user/{{ .environment }}/CLERK_SECRET_KEY"
+    CLERK_WEBHOOK_SECRET: "secret://turso-per-user/turso-per-user/{{ .environment }}/CLERK_WEBHOOK_SECRET"
+    TURSO_API_TOKEN: "secret://turso-per-user/turso-per-user/{{ .environment }}/TURSO_API_TOKEN"
+    TURSO_ORG: "secret://turso-per-user/turso-per-user/{{ .environment }}/TURSO_ORG"
+    TURSO_DATABASE_NAME: "secret://turso-per-user/turso-per-user/{{ .environment }}/TURSO_DATABASE_NAME"
+    TURSO_GROUP_AUTH_TOKEN: "secret://turso-per-user/turso-per-user/{{ .environment }}/TURSO_GROUP_AUTH_TOKEN"
+  subscribe:
+    environments:
+      - name: dev
+        profile: verify
+      - name: stage
+        profile: verify
+        profileRules:
+          - profile: deploy
+            when:
+              triggerRef: github-push-main
+      - name: prod
+        profile: verify
+        profileRules:
+          - profile: deploy
+            when:
+              triggerRef: github-push-main
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "10.12.1"
+
+    workspaceDir: ../..
+    appDir: .
+
+    turboFilter: "@app/web"
+    wranglerConfig: wrangler.jsonc
+
+    # @opennextjs/cloudflare emits a Worker entrypoint plus a static-assets
+    # directory bound via ASSETS — both deploy in one `wrangler deploy`.
+    workerEntrypoint: .open-next/worker.js
+    assetsDir: .open-next/assets
+
+    # Per-env worker name: turso-per-user-web-{dev,stage,prod}.
+    workerName: turso-per-user-web
+    environmentAwareWorkerName: true
+
+    # The account's workers.dev subdomain; exported to the smoke step as
+    # ${WORKERS_DEV_SUBDOMAIN} and used to build ${DEPLOYED_URL}.
+    workersDevSubdomain: your-workers-subdomain
+
+    installCommand: pnpm install --frozen-lockfile
+    # The site's public origin (the Open Graph image's absolute URL): the
+    # environment's SITE_URL when intent.yaml sets one (a custom domain), else
+    # its workers.dev URL. The subdomain is written out rather than read from
+    # ${WORKERS_DEV_SUBDOMAIN}: the composition exports that to the smoke
+    # step only, so the build would see it empty. ${ORUN_ENVIRONMENT} the
+    # runner sets for every step.
+    #
+    # The Worker's keys never reach the build: `next build` runs without them
+    # (`env -u`) — of Clerk's secret key it is told only that it exists
+    # (CLERK_SECRET_KEY_SET), which decides whether Clerk is connected — so
+    # neither a bundle nor the bundler's cache holds one. Then the keys the
+    # environment has go to the Worker as SECRETS
+    # (tooling/wire/worker-secrets.mjs: `wrangler secret bulk`, the values
+    # over stdin) before the composition deploys it. Only the deploy lane
+    # holds a Cloudflare credential, so a verify lane builds the same and
+    # pushes nothing.
+    buildCommand: CLERK_SECRET_KEY_SET="${CLERK_SECRET_KEY:+true}" NEXT_PUBLIC_SITE_URL="${SITE_URL:-https://turso-per-user-web-${ORUN_ENVIRONMENT}.your-workers-subdomain.workers.dev}" env -u CLERK_SECRET_KEY -u CLERK_WEBHOOK_SECRET -u TURSO_API_TOKEN -u TURSO_ORG -u TURSO_DATABASE_NAME -u TURSO_GROUP_AUTH_TOKEN pnpm exec turbo run build --filter=@app/web && node ../../tooling/wire/worker-secrets.mjs --secret CLERK_SECRET_KEY --secret CLERK_WEBHOOK_SECRET --secret TURSO_API_TOKEN --secret TURSO_ORG --secret TURSO_DATABASE_NAME --secret TURSO_GROUP_AUTH_TOKEN --worker "turso-per-user-web-${ORUN_ENVIRONMENT}" --config wrangler.jsonc
+
+    # Smoke: the landing renders to its end (`</html>` — a render that throws
+    # partway through a streamed page still sent a 200) with the template's
+    # "Database per user demo", and /api/health answers ok — the Worker holds
+    # what its build expects (Clerk's secret key, when the build has Clerk),
+    # Turso and the webhook connected or not. Each response is buffered before
+    # grep so an early match cannot SIGPIPE curl.
+    smokeCommand: "html=$(curl -sfL \"${DEPLOYED_URL}/\") && echo \"${html}\" | grep -q '</html>' && echo \"${html}\" | grep -q 'Database per user demo' && health=$(curl -sf \"${DEPLOYED_URL}/api/health\") && echo \"${health}\" | grep -q '\"ok\":true'"
+  labels:
+    team: platform
+    layer: delivery
+    surface: web
+    runtime: cloudflare
